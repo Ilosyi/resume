@@ -157,3 +157,9 @@ export function loadDefaultTemplate(): Promise<ResumeData | null> {
 export function loadExampleTemplate(): Promise<ResumeData | null> {
   return loadTemplateFrom("/example.json")
 }
+
+export type ResumeDataTemplateId = "default" | "example"
+
+export function loadDataTemplateById(id: ResumeDataTemplateId): Promise<ResumeData | null> {
+  return id === "example" ? loadExampleTemplate() : loadDefaultTemplate()
+}

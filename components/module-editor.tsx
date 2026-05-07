@@ -89,6 +89,7 @@ const createNewTagsRow = (order: number): ModuleContentRow => {
 
 export default function ModuleEditor({ modules, onUpdate }: ModuleEditorProps) {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
+  const sortedModules = [...modules].sort((a, b) => a.order - b.order)
 
   /**
    * 添加新模块
@@ -123,6 +124,17 @@ export default function ModuleEditor({ modules, onUpdate }: ModuleEditorProps) {
     })
   }
 
+  const moveModule = (id: string, direction: "up" | "down") => {
+    const currentIndex = sortedModules.findIndex((module) => module.id === id)
+    const nextIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= sortedModules.length) return
+
+    const updatedModules = [...sortedModules]
+    const [movedModule] = updatedModules.splice(currentIndex, 1)
+    updatedModules.splice(nextIndex, 0, movedModule)
+    onUpdate(updatedModules.map((module, index) => ({ ...module, order: index })))
+  }
+
   /**
    * 处理模块拖拽
    */
@@ -130,15 +142,11 @@ export default function ModuleEditor({ modules, onUpdate }: ModuleEditorProps) {
     if (!result.destination) return
     if (result.source.index === result.destination.index) return
 
-    const updatedModules = [...modules]
+    const updatedModules = [...sortedModules]
     const [movedModule] = updatedModules.splice(result.source.index, 1)
     updatedModules.splice(result.destination.index, 0, movedModule)
 
-    updatedModules.forEach((module, index) => {
-      module.order = index
-    })
-
-    onUpdate(updatedModules)
+    onUpdate(updatedModules.map((module, index) => ({ ...module, order: index })))
   }
 
   /**
@@ -173,9 +181,7 @@ export default function ModuleEditor({ modules, onUpdate }: ModuleEditorProps) {
         <Droppable droppableId="modules-list">
           {(provided) => (
             <div className="space-y-3" {...provided.droppableProps} ref={provided.innerRef}>
-              {modules
-                .sort((a, b) => a.order - b.order)
-                .map((module, index) => (
+              {sortedModules.map((module, index) => (
                   <Draggable key={module.id} draggableId={module.id} index={index}>
                     {(provided, snapshot) => (
                       <div
@@ -193,6 +199,10 @@ export default function ModuleEditor({ modules, onUpdate }: ModuleEditorProps) {
                           onToggle={() => toggleModule(module.id)}
                           onUpdate={(updates) => updateModule(module.id, updates)}
                           onRemove={() => removeModule(module.id)}
+                          onMoveUp={() => moveModule(module.id, "up")}
+                          onMoveDown={() => moveModule(module.id, "down")}
+                          canMoveUp={index > 0}
+                          canMoveDown={index < sortedModules.length - 1}
                         />
                       </div>
                     )}
@@ -224,6 +234,10 @@ interface ModuleItemProps {
   onToggle: () => void
   onUpdate: (updates: Partial<ResumeModule>) => void
   onRemove: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  canMoveUp: boolean
+  canMoveDown: boolean
 }
 
 function ModuleItem({
@@ -233,6 +247,10 @@ function ModuleItem({
   onToggle,
   onUpdate,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: ModuleItemProps) {
 
   /**
@@ -330,10 +348,42 @@ function ModuleItem({
             >
               <Icon icon="mdi:delete" className="w-4 h-4" />
             </Button>
-            <div {...dragHandleProps} onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="ghost"
+              title="上移模块"
+              disabled={!canMoveUp}
+              onClick={(e) => {
+                e.stopPropagation()
+                onMoveUp()
+              }}
+              className="h-8 w-8 p-0"
+            >
+              <Icon icon="mdi:arrow-up" className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              title="下移模块"
+              disabled={!canMoveDown}
+              onClick={(e) => {
+                e.stopPropagation()
+                onMoveDown()
+              }}
+              className="h-8 w-8 p-0"
+            >
+              <Icon icon="mdi:arrow-down" className="w-4 h-4" />
+            </Button>
+            <div
+              {...dragHandleProps}
+              title="拖拽调整模块顺序"
+              aria-label="拖拽调整模块顺序"
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-8 w-8 items-center justify-center rounded border bg-background text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+            >
               <Icon
                 icon="mdi:drag"
-                className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing"
+                className="w-4 h-4"
               />
             </div>
           </div>
@@ -379,6 +429,7 @@ function ModuleItem({
                 <EmptyRowPlaceholder onAddRow={addRow} onAddTagsRow={() => addTagsRow()} />
               ) : (
                 module.rows
+                  .slice()
                   .sort((a, b) => a.order - b.order)
                   .map((row) => (
                     <ContentRowEditor

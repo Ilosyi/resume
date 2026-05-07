@@ -1,0 +1,4 @@
+openai:
+  baseurl: "https://api.openai.com/v1"
+  apikey: "sk-your-api-key"
+  model: "gpt-4.1-mini"

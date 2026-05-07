@@ -1,4 +1,6 @@
 import type { ResumeData, ResumeFile, ResumeModule, PersonalInfoItem, JobIntentionItem } from "@/types/resume"
+import { normalizeTemplateDefinition } from "@/lib/templates/schema"
+import { getPersonalInfoIcon } from "@/lib/resume-content"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -15,6 +17,7 @@ export function createDefaultResumeData(): ResumeData {
 
   return {
     title: "我的简历",
+    templateId: "classic",
     centerTitle: true,
     personalInfoSection: {
       personalInfo: [
@@ -282,7 +285,7 @@ export function createNewPersonalInfoItem(): PersonalInfoItem {
       content: "",
       type: "text",
     },
-    icon: "mdi:information",
+    icon: getPersonalInfoIcon("信息"),
     order: 0,
   }
 }
@@ -305,6 +308,7 @@ export function createNewJobIntentionItem(type: 'workYears' | 'position' | 'city
     value: '',
     order,
     type,
+    breakAfter: false,
     salaryRange: type === 'salary' ? { min: undefined, max: undefined } : undefined
   }
 }
@@ -393,6 +397,10 @@ export function importFromMagicyanFile(fileContent: string): ResumeData {
 
   return {
     ...data,
+    templateId: data.templateDefinition?.id || data.templateId || "classic",
+    templateDefinition: data.templateDefinition
+      ? normalizeTemplateDefinition(data.templateDefinition)
+      : undefined,
     personalInfoSection: {
       personalInfo: data.personalInfoSection?.personalInfo || [],
       showPersonalInfoLabels: data.personalInfoSection?.showPersonalInfoLabels !== undefined ? data.personalInfoSection.showPersonalInfoLabels : true,

@@ -423,6 +423,25 @@ function JobIntentionItemEditor({
 
         {/* 删除按钮和拖拽手柄组 */}
         <div className="flex items-center gap-1 flex-[0_0_auto] pt-0">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={item.breakAfter ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onUpdate({ breakAfter: !item.breakAfter })}
+                  disabled={disabled}
+                  className="icon-button h-8 w-8 p-0 flex-shrink-0"
+                >
+                  <Icon icon="mdi:format-line-spacing" className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{item.breakAfter ? "取消此项后换行" : "在此项后换行"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {/* 删除按钮 */}
           <Button
             variant="ghost"

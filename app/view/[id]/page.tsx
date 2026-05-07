@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useMemo } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -12,7 +12,26 @@ import ResumePreview from "@/components/resume-preview"
 export default function ViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const entry = useMemo<StoredResume | null>(() => getResumeById(id), [id])
+  const [entry, setEntry] = useState<StoredResume | null | undefined>(undefined)
+
+  useEffect(() => {
+    try {
+      setEntry(getResumeById(id))
+    } catch {
+      setEntry(null)
+    }
+  }, [id])
+
+  if (entry === undefined) {
+    return (
+      <main className="min-h-screen bg-background p-6">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
+          正在读取简历...
+        </div>
+      </main>
+    )
+  }
 
   if (!entry) {
     return (

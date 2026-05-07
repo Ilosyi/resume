@@ -3,17 +3,37 @@
 
 import { useLayoutEffect, useRef, useState } from "react"
 import { Icon } from "@iconify/react"
-import type { ResumeData } from "@/types/resume"
+import type { ResumeData, ResumeTemplateDefinition } from "@/types/resume"
+import { resolveTemplateDefinition } from "@/lib/templates/registry"
+import { ConfigurableTemplate, SidebarTemplate } from "@/components/resume-templates/structured-template"
 import RichTextRenderer from "./rich-text-renderer"
 
 interface ResumePreviewProps {
   resumeData: ResumeData
+  templateDefinition?: ResumeTemplateDefinition | null
 }
 
 /**
  * 简历预览组件
  */
-export default function ResumePreview({ resumeData }: ResumePreviewProps) {
+export default function ResumePreview({ resumeData, templateDefinition }: ResumePreviewProps) {
+  const activeTemplate = resolveTemplateDefinition(
+    templateDefinition ?? resumeData.templateDefinition,
+    resumeData.templateId,
+  );
+
+  if (activeTemplate.layout.mode === "sidebar") {
+    return <SidebarTemplate resumeData={resumeData} template={activeTemplate} />;
+  }
+
+  if (activeTemplate.layout.mode === "minimal" || activeTemplate.layout.mode === "configurable") {
+    return <ConfigurableTemplate resumeData={resumeData} template={activeTemplate} />;
+  }
+
+  return <ClassicResumePreview resumeData={resumeData} />;
+}
+
+function ClassicResumePreview({ resumeData }: { resumeData: ResumeData }) {
   const isAsciiOnly = (str: string | undefined) => !!str && /^[\x00-\x7F]+$/.test(str);
   const leftRef = useRef<HTMLDivElement | null>(null);
   const rightRef = useRef<HTMLDivElement | null>(null);
@@ -463,6 +483,7 @@ export default function ResumePreview({ resumeData }: ResumePreviewProps) {
       {/* 简历模块 */}
       <div className="space-y-6">
         {resumeData.modules
+          .slice()
           .sort((a, b) => a.order - b.order)
           .map((module) => (
             <div key={module.id} className="resume-module">
@@ -481,6 +502,7 @@ export default function ResumePreview({ resumeData }: ResumePreviewProps) {
               <div className="space-y-[0.3em]">
                 {/* 渲染行 */}
                 {module.rows
+                  .slice()
                   .sort((a, b) => a.order - b.order)
                   .map((row) => (
                     row.type === 'tags' ? (

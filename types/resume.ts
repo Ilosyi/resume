@@ -65,6 +65,8 @@ export interface JobIntentionItem {
   order: number
   /** 类型 */
   type: 'workYears' | 'position' | 'city' | 'salary' | 'custom'
+  /** 渲染求职意向时是否在该项后强制换行 */
+  breakAfter?: boolean
   /** 薪资范围（仅当type为salary时使用） */
   salaryRange?: {
     min?: number
@@ -142,6 +144,10 @@ export interface ResumeModule {
 export interface ResumeData {
   /** 简历标题/姓名 */
   title: string
+  /** 当前使用的视觉模板 ID */
+  templateId?: string
+  /** 自定义或 AI 生成的视觉模板定义；导出时会随简历一起保存 */
+  templateDefinition?: ResumeTemplateDefinition
   /** 简历标题是否居中显示 */
   centerTitle?: boolean
   /** 个人信息模块 */
@@ -183,6 +189,8 @@ export interface ResumeFile {
   version: string
   /** 简历数据 */
   data: ResumeData
+  /** 随文件携带的自定义模板，便于换设备后保持版式 */
+  templates?: StoredResumeTemplate[]
   /** 文件元数据 */
   metadata: {
     /** 导出时间 */
@@ -204,4 +212,59 @@ export interface EditorState {
   selectedModuleId?: string
   /** 是否显示预览 */
   showPreview: boolean
+}
+
+/**
+ * 视觉模板布局模式。
+ * classic 保持当前默认版式；sidebar 是左右栏；configurable 用参数驱动通用复刻模板。
+ */
+export type ResumeTemplateLayoutMode = "classic" | "minimal" | "sidebar" | "configurable"
+
+export interface ResumeTemplateDefinition {
+  id: string
+  name: string
+  source: "builtin" | "custom" | "generated"
+  description?: string
+  layout: {
+    mode: ResumeTemplateLayoutMode
+    pagePadding: number
+    sectionGap: number
+    leftColumnPercent?: number
+    density?: "compact" | "normal" | "relaxed"
+  }
+  typography: {
+    fontFamily: string
+    titleSize: number
+    sectionTitleSize: number
+    bodySize: number
+    lineHeight: number
+  }
+  colors: {
+    primary: string
+    text: string
+    muted: string
+    border: string
+    background: string
+    sectionBackground?: string
+    sidebarBackground?: string
+  }
+  header: {
+    align: "left" | "center" | "split"
+    avatarPosition: "none" | "left" | "right" | "top"
+    personalInfoStyle: "inline" | "grid" | "sidebar-list"
+  }
+  section: {
+    titleStyle: "underline" | "bar" | "badge" | "plain"
+    iconVisible: boolean
+    dividerVisible: boolean
+  }
+}
+
+export interface StoredResumeTemplate {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  definition: ResumeTemplateDefinition
+  previewImage?: string
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useMemo, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import ResumeBuilder from "@/components/resume-builder"
 import { Button } from "@/components/ui/button"
@@ -14,8 +14,20 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
   const router = useRouter()
   const { toast } = useToast()
   const [, setCurrentData] = useState<ResumeData | null>(null)
+  const [entry, setEntry] = useState<StoredResume | null | undefined>(undefined)
 
-  const entry = useMemo<StoredResume | null>(() => getResumeById(id), [id])
+  useEffect(() => {
+    try {
+      setEntry(getResumeById(id))
+    } catch (e) {
+      setEntry(null)
+      toast({
+        title: "读取失败",
+        description: e instanceof Error ? e.message : "无法读取本地简历",
+        variant: "destructive",
+      })
+    }
+  }, [id, toast])
 
   const handleSave = async (data: ResumeData) => {
     try {
@@ -33,6 +45,17 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
         toast({ title: "保存失败", description: message, variant: "destructive" })
       }
     }
+  }
+
+  if (entry === undefined) {
+    return (
+      <main className="min-h-screen bg-background p-6">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
+          正在读取简历...
+        </div>
+      </main>
+    )
   }
 
   if (!entry) {

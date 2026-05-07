@@ -6,6 +6,7 @@ import ResumeBuilder from "@/components/resume-builder"
 import type { ResumeData } from "@/types/resume"
 import { createEntryFromData, StorageError, getResumeById } from "@/lib/storage"
 import { useToast } from "@/hooks/use-toast"
+import { getBuiltinTemplateById } from "@/lib/templates/registry"
 
 export default function NewEditPage() {
   // 包裹 Suspense 以满足 useSearchParams 的要求，fallback 为空避免“加载中...”
@@ -23,6 +24,7 @@ function NewEditPageContent() {
 
   const cloneId = search.get("clone")
   const useExample = search.get("example") === "1" || search.get("example") === "true"
+  const visualTemplateId = search.get("visualTemplate") || search.get("template")
 
   // 从 sessionStorage 恢复用户中心预加载的数据
   const prefetchedData: ResumeData | undefined = useMemo(() => {
@@ -45,6 +47,17 @@ function NewEditPageContent() {
     const entry = getResumeById(cloneId)
     return entry ? { ...entry.resumeData } : undefined
   }, [cloneId])
+
+  const initialData = useMemo(() => {
+    const data = clonedData ?? prefetchedData
+    if (!data || !visualTemplateId) return data
+    const template = getBuiltinTemplateById(visualTemplateId)
+    return {
+      ...data,
+      templateId: template.id,
+      templateDefinition: template.source === "builtin" ? undefined : template,
+    }
+  }, [clonedData, prefetchedData, visualTemplateId])
 
   const handleSave = async (current: ResumeData) => {
     try {
@@ -69,7 +82,7 @@ function NewEditPageContent() {
     <main className="min-h-screen bg-background">
       <ResumeBuilder
         // 优先使用：克隆数据 > 预加载数据
-        initialData={clonedData ?? prefetchedData}
+        initialData={initialData}
         template={useExample ? "example" : "default"}
         onBack={() => router.push("/")}
         onSave={(d) => handleSave(d)}

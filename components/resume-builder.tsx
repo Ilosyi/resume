@@ -9,14 +9,16 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Icon } from "@iconify/react"
-import type { ResumeData, EditorState } from "@/types/resume"
+import type { ResumeData, EditorState, ResumeTemplateDefinition } from "@/types/resume"
 import { createDefaultResumeData } from "@/lib/utils"
-import { loadDefaultTemplate, loadExampleTemplate } from "@/lib/storage"
+import { loadDataTemplateById, type ResumeDataTemplateId } from "@/lib/storage"
 import ResumePreview from "./resume-preview"
 import PersonalInfoEditor from "./personal-info-editor"
 import JobIntentionEditor from "./job-intention-editor"
 import ModuleEditor from "./module-editor"
 import ExportButton from "./export-button"
+import TemplateManager from "./template-manager"
+import AIOrganizePanel from "./ai-organize-panel"
 
 type ViewMode = "both" | "edit-only" | "preview-only"
 
@@ -63,7 +65,7 @@ ViewModeSelector.displayName = "ViewModeSelector"
 /**
  * 简历构建器主组件
  */
-export default function ResumeBuilder({ initialData, template = "default", onChange, onSave, onBack }: { initialData?: ResumeData; template?: "default" | "example"; onChange?: (data: ResumeData) => void; onSave?: (data: ResumeData) => void; onBack?: () => void }) {
+export default function ResumeBuilder({ initialData, template = "default", onChange, onSave, onBack }: { initialData?: ResumeData; template?: ResumeDataTemplateId; onChange?: (data: ResumeData) => void; onSave?: (data: ResumeData) => void; onBack?: () => void }) {
   const [editorState, setEditorState] = useState<EditorState>({
     resumeData: initialData ?? createDefaultResumeData(),
     isEditing: true,
@@ -75,11 +77,14 @@ export default function ResumeBuilder({ initialData, template = "default", onCha
   useEffect(() => {
     if (initialData) return
     const loadTemplate = async () => {
-      const tpl = template === "example" ? await loadExampleTemplate() : await loadDefaultTemplate()
+      const tpl = await loadDataTemplateById(template)
       if (!tpl) return
       setEditorState((prev) => ({
         ...prev,
-        resumeData: tpl,
+        resumeData: {
+          ...tpl,
+          templateId: tpl.templateId || "classic",
+        },
       }))
     }
     loadTemplate()
@@ -96,6 +101,26 @@ export default function ResumeBuilder({ initialData, template = "default", onCha
       resumeData: {
         ...prev.resumeData,
         ...updates,
+        updatedAt: new Date().toISOString(),
+      },
+    }))
+  }, [])
+
+  const applyVisualTemplate = useCallback((templateDefinition: ResumeTemplateDefinition) => {
+    updateResumeData({
+      templateId: templateDefinition.id,
+      templateDefinition: templateDefinition.source === "builtin" ? undefined : templateDefinition,
+    })
+  }, [updateResumeData])
+
+  const applyAIResumeData = useCallback((resumeData: ResumeData) => {
+    setEditorState((prev) => ({
+      ...prev,
+      resumeData: {
+        ...resumeData,
+        templateId: prev.resumeData.templateId,
+        templateDefinition: prev.resumeData.templateDefinition,
+        avatar: resumeData.avatar ?? prev.resumeData.avatar,
         updatedAt: new Date().toISOString(),
       },
     }))
@@ -165,6 +190,17 @@ export default function ResumeBuilder({ initialData, template = "default", onCha
           <div className={`editor-panel ${viewMode === "edit-only" ? "w-full" : ""}`}>
             <div className="p-6 space-y-6">
               {/* 简历标题编辑 */}
+              <TemplateManager
+                activeTemplateId={editorState.resumeData.templateId}
+                activeTemplateDefinition={editorState.resumeData.templateDefinition}
+                onSelect={applyVisualTemplate}
+              />
+
+              <AIOrganizePanel
+                resumeData={editorState.resumeData}
+                onApply={applyAIResumeData}
+              />
+
               <Card className="p-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
